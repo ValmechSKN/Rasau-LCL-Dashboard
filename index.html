@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rasau LCL — Live Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --navy: #0f2c4d;
+    --navy-2: #1a3f6b;
+    --teal: #117e8a;
+    --bg: #f4f6f9;
+    --card: #ffffff;
+    --border: #e3e8ef;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --green: #16a34a;
+    --amber: #d97706;
+    --red: #dc2626;
+    --blue: #2563eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    scroll-behavior: smooth;
+  }
+  header.topbar {
+    background: var(--navy);
+    color: white;
+    padding: 14px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .brand { font-size: 16px; font-weight: 600; letter-spacing: 0.3px; }
+  .brand .sub { font-weight: 400; opacity: 0.75; margin-left: 10px; font-size: 13px; }
+  .user { font-size: 13px; opacity: 0.85; }
+
+  nav.tabs {
+    background: white;
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px;
+    display: flex;
+    gap: 0;
+    position: sticky;
+    top: 56px;
+    z-index: 99;
+  }
+  nav.tabs button {
+    background: none;
+    border: none;
+    padding: 14px 20px;
+    font-size: 14px;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    font-weight: 500;
+  }
+  nav.tabs button:hover { color: var(--text); }
+  nav.tabs button.active {
+    color: var(--navy);
+    border-bottom-color: var(--teal);
+  }
+
+  main { padding: 24px 28px; max-width: 1500px; margin: 0 auto; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ===== Plant single-page layout with side nav ===== */
+  .plant-layout {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+  .plant-sidenav {
+    position: sticky;
+    top: 120px;
+    padding: 12px 0;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .plant-sidenav .sn-header {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 4px 16px 10px 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 6px;
+  }
+  .plant-sidenav a {
+    display: block;
+    padding: 9px 16px;
+    font-size: 13px;
+    color: var(--text);
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: background 0.15s;
+  }
+  .plant-sidenav a:hover { background: #f4f8fb; color: var(--navy); }
+  .plant-sidenav a.active {
+    color: var(--navy);
+    border-left-color: var(--teal);
+    background: #f4f8fb;
+    font-weight: 600;
+  }
+  .plant-content { min-width: 0; }
+  .content-section {
+    margin-top: 36px;
+    scroll-margin-top: 130px;
+  }
+  .content-section:first-child { margin-top: 0; }
+  .section-h2 {
+    font-size: 17px;
+    color: var(--navy);
+    margin: 0 0 14px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .section-h2 .h2-meta {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--muted);
+  }
+
+  /* ===== Standard atoms ===== */
+  .breadcrumb { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .breadcrumb span.sep { margin: 0 6px; opacity: 0.5; }
+  h1.page-title { font-size: 22px; margin: 0 0 4px 0; color: var(--navy); font-weight: 600; }
+  .page-meta { color: var(--muted); font-size: 13px; margin-bottom: 22px; }
+  .page-meta .pill {
+    display: inline-block;
+    padding: 2px 10px;
+    background: #e8f0fa;
+    color: var(--navy-2);
+    border-radius: 999px;
+    font-size: 12px;
+    margin-right: 6px;
+    font-weight: 500;
+  }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+  .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+  .kpi .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .kpi .value { font-size: 26px; font-weight: 600; color: var(--navy); margin-top: 6px; }
+  .kpi .delta { font-size: 12px; margin-top: 4px; }
+  .delta.up { color: var(--green); }
+  .delta.down { color: var(--red); }
+  .delta.flat { color: var(--muted); }
+
+  .grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-2-eq { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
+  .card h3 { margin: 0 0 14px 0; font-size: 14px; font-weight: 600; color: var(--navy); display: flex; justify-content: space-between; align-items: center; }
+  .card h3 .meta { font-size: 12px; color: var(--muted); font-weight: 400; }
+
+  table.wbs { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.wbs th { text-align: left; padding: 8px 6px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); text-transform: uppercase; font-size: 11px; letter-spacing: 0.4px; }
+  table.wbs td { padding: 10px 6px; border-bottom: 1px solid #f1f3f6; vertical-align: middle; }
+  table.wbs tr:last-child td { border-bottom: none; }
+
+  .pct-cell { text-align: center; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .pct-cell.pct-high { background: #d4edda; color: #155724; }
+  .pct-cell.pct-mid { background: #fff3cd; color: #856404; }
+  .pct-cell.pct-mid-low { background: #ffe5d0; color: #944317; }
+  .pct-cell.pct-low { background: #fde2e4; color: #91374a; }
+  table.wbs td.pct-cell { padding: 8px 6px; }
+  tr.totals td { background: #f1f5f9; font-weight: 700; border-top: 2px solid var(--navy); }
+  tr.totals td.pct-cell { border-top: 2px solid var(--navy); }
+  .sub-header {
+    margin: 22px 0 10px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--navy-2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--teal);
+  }
+  .sub-header:first-child { margin-top: 0; }
+
+  .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .status-dot.green { background: var(--green); }
+  .status-dot.amber { background: var(--amber); }
+  .status-dot.red { background: var(--red); }
+  .status-dot.gray { background: #9ca3af; }
+
+  .status { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
+  .status.approved { background: #e6f4ea; color: var(--green); }
+  .status.pending { background: #fff4e0; color: var(--amber); }
+  .status.review { background: #e8f0fa; color: var(--blue); }
+
+  /* Today's report card */
+  .report-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    background: white;
+    margin-bottom: 10px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: start;
+  }
+  .report-card .who { font-weight: 600; color: var(--navy); font-size: 14px; }
+  .report-card .meta-line { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .report-card .activity { font-size: 13px; margin-top: 8px; color: var(--text); }
+  .report-card .right-col { text-align: right; font-size: 12px; color: var(--muted); }
+  .report-card .right-col .photos { margin-top: 6px; }
+
+  .issue-row { padding: 10px 0; border-bottom: 1px solid #f1f3f6; font-size: 13px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .issue-row:last-child { border-bottom: none; }
+  .issue-row .title { font-weight: 500; color: var(--text); }
+  .issue-row .who { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .issue-row .priority { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 500; white-space: nowrap; }
+  .priority.high { background: #fde8e8; color: var(--red); }
+  .priority.med { background: #fff4e0; color: var(--amber); }
+  .priority.low { background: #eef2f7; color: var(--muted); }
+
+  /* Procurement stage badges (0% / 25% / 50% / 75% / 100%) */
+  .proc-stage {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .proc-stage.s0   { background: #f3f4f6; color: #6b7280; }
+  .proc-stage.s25  { background: #fef3c7; color: #92400e; }
+  .proc-stage.s50  { background: #fed7aa; color: #9a3412; }
+  .proc-stage.s75  { background: #d1fae5; color: #065f46; }
+  .proc-stage.s100 { background: #cffafe; color: #155e75; }
+
+  /* Activity drill-down rows (nested under tank) */
+  .activity-row td { background: #fbfcfe; font-size: 12px; padding: 6px 6px; }
+  .activity-row td:first-child { padding-left: 24px; color: var(--muted); font-family: 'SF Mono', Consolas, monospace; font-size: 11px; }
+  .milestone-row td { background: #f4f8fb; font-style: italic; color: var(--muted); }
+  .disc-tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+  .disc-tag.cs { background: #e0e7ff; color: #3730a3; }
+  .disc-tag.mech { background: #ccfbf1; color: #115e59; }
+  .disc-tag.elec { background: #fce7f3; color: #9d174d; }
+  .disc-tag.inst { background: #fef3c7; color: #92400e; }
+
+  .plant-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .plant-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.15s; }
+  .plant-card:hover { border-color: var(--teal); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+  .plant-card .name { font-weight: 600; color: var(--navy); font-size: 14px; }
+  .plant-card .code { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+  .plant-card .progress { font-size: 22px; font-weight: 600; margin: 6px 0 4px 0; }
+  .plant-card .tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; margin-right: 4px; }
+  .tag.process { background: #e8f0fa; color: var(--blue); }
+  .tag.chemical { background: #f3e8fa; color: #8b5cf6; }
+
+  .section-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin: 20px 0 10px 0; font-weight: 600; }
+
+  .chart-wrap { height: 220px; position: relative; }
+
+  .pilot-badge { background: linear-gradient(135deg, #117e8a, #1a9aa8); color: white; font-size: 10px; padding: 2px 8px; border-radius: 999px; font-weight: 600; letter-spacing: 0.4px; margin-left: 8px; }
+
+  .photo-strip { display: flex; gap: 8px; flex-wrap: wrap; }
+  .photo { width: 110px; height: 84px; background: linear-gradient(135deg, #cbd5e1, #94a3b8); border-radius: 6px; position: relative; overflow: hidden; font-size: 10px; color: white; display: flex; align-items: flex-end; justify-content: flex-start; padding: 6px; }
+  .photo:nth-child(2) { background: linear-gradient(135deg, #475569, #334155); }
+  .photo:nth-child(3) { background: linear-gradient(135deg, #64748b, #475569); }
+  .photo:nth-child(4) { background: linear-gradient(135deg, #94a3b8, #64748b); }
+  .photo:nth-child(5) { background: linear-gradient(135deg, #334155, #1e293b); }
+  .photo:nth-child(6) { background: linear-gradient(135deg, #44546a, #2a3849); }
+  .photo:nth-child(7) { background: linear-gradient(135deg, #708090, #4a5868); }
+
+  .mockup-note { background: #fef9e7; border: 1px dashed #d4a017; color: #6b4f00; padding: 10px 14px; border-radius: 8px; font-size: 12px; margin-bottom: 18px; }
+
+  .link-arrow { color: var(--teal); font-size: 13px; font-weight: 500; text-decoration: none; }
+  .link-arrow:hover { color: var(--navy-2); }
+
+  @media (max-width: 1100px) {
+    .plant-layout { grid-template-columns: 1fr; }
+    .plant-sidenav { position: relative; top: 0; display: flex; flex-wrap: wrap; gap: 0; }
+    .plant-sidenav .sn-header { display: none; }
+    .plant-sidenav a { border-left: none; border-bottom: 2px solid transparent; }
+    .plant-sidenav a.active { border-left: none; border-bottom-color: var(--teal); }
+  }
+  @media (max-width: 900px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .grid-2, .grid-2-eq, .grid-3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">Valmech PM Dashboard <span class="sub">— Rasau LCL v1</span></div>
+  <div class="user"><span style="opacity: 0.85;">Last refreshed: 21 May 2026</span></div>
+</header>
+
+<nav class="tabs">
+  <button class="active" data-tab="lcl">LCL Plant Dashboard</button>
+  <button data-tab="lcl-archive">LCL Reports Archive</button>
+  <button data-tab="rasau">Rasau Rollup</button>
+</nav>
+
+<main>
+
+  <div class="mockup-note" style="background: #e6f4ea; border: 1px solid #16a34a; color: #14532d;">
+    <strong>v1 — Day-zero snapshot from A65 5A7 LCL Tracker (14 May 2026 baseline).</strong> Progress Breakdown shows real tracker values. Today's Daily Reports, Delivery Orders, and Site Photos placeholders pending the Power Apps + data pipeline. Refreshes manually — contact Ken to update.
+  </div>
+
+  <!-- ============ LCL PLANT DASHBOARD (single page, side nav) ============ -->
+  <section class="view active" id="lcl">
+    <div class="plant-layout">
+
+      <aside class="plant-sidenav">
+        <div class="sn-header">On this page</div>
+        <a href="#overview" class="active">Overview</a>
+        <a href="#progress">Progress Breakdown</a>
+        <a href="#reports">Today's Reports</a>
+        <a href="#activities">Activities & Procurement</a>
+        <a href="#deliveries">Delivery Orders</a>
+        <a href="#trends">Trends</a>
+        <a href="#photos">Site Photos</a>
+      </aside>
+
+      <div class="plant-content">
+
+        <!-- === OVERVIEW HEADER === -->
+        <div class="content-section" id="overview">
+          <div class="breadcrumb">
+            Valmech <span class="sep">›</span> Projects <span class="sep">›</span> Rasau <span class="sep">›</span> <strong style="color:var(--navy)">Clarifier (LCL)</strong>
+          </div>
+          <h1 class="page-title">Lamella Clarifier (LCL) <span class="pilot-badge">PILOT</span></h1>
+          <div class="page-meta">
+            <span class="pill">Code: A65 5A7</span>
+            <span class="pill">2 Streams · 16 Tanks</span>
+            <span class="pill">BQ Value: RM 43.0M</span>
+            <span class="pill">Team Lead: A. Rahman</span>
+            Last update: today, 16:42 · Reports filed today: 4 / 4 · Manpower on site: 38 (own 14 · subcon 24)
+          </div>
+
+          <div class="kpi-row">
+            <div class="kpi">
+              <div class="label">Combined Progress</div>
+              <div class="value">50.2%</div>
+              <div class="delta up">▲ 1.8% this week</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Procurement</div>
+              <div class="value" style="color:var(--teal)">66.9%</div>
+              <div class="delta up">▲ 0.6% this week</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Installation</div>
+              <div class="value" style="color:var(--amber)">33.6%</div>
+              <div class="delta up">▲ 3.0% this week</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Earned Value</div>
+              <div class="value">RM 21.6M</div>
+              <div class="delta flat">of RM 43.0M total</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- === PROGRESS BREAKDOWN === -->
+        <section class="content-section" id="progress">
+          <h2 class="section-h2">Progress Breakdown <span class="h2-meta">Procurement % + Installation % → Combined % (weighted 50/50)</span></h2>
+          <div class="card">
+            <div class="sub-header">Progress by Section</div>
+            <table class="wbs">
+              <thead>
+                <tr>
+                  <th>Stream</th>
+                  <th>Section</th>
+                  <th style="text-align:right">BQ Value (RM)</th>
+                  <th style="text-align:center">Procurement %</th>
+                  <th style="text-align:center">Installation %</th>
+                  <th style="text-align:center">Combined %</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Stream A</strong></td>
+                  <td>Lamella Clarifier (8 tanks)</td>
+                  <td style="text-align:right">20,177,440</td>
+                  <td class="pct-cell pct-high">100.0%</td>
+                  <td class="pct-cell pct-mid">69.9%</td>
+                  <td class="pct-cell pct-high">85.0%</td>
+                </tr>
+                <tr>
+                  <td><strong>Stream A</strong></td>
+                  <td>Compressed Air System</td>
+                  <td style="text-align:right">223,100</td>
+                  <td class="pct-cell pct-mid">78.3%</td>
+                  <td class="pct-cell pct-low">0.0%</td>
+                  <td class="pct-cell pct-mid-low">39.1%</td>
+                </tr>
+                <tr>
+                  <td><strong>Stream A</strong></td>
+                  <td>Panels</td>
+                  <td style="text-align:right">1,099,290</td>
+                  <td class="pct-cell pct-low">0.0%</td>
+                  <td class="pct-cell pct-low">0.0%</td>
+                  <td class="pct-cell pct-low">0.0%</td>
+                </tr>
+                <tr>
+                  <td><strong>Stream B</strong></td>
+                  <td>Lamella Clarifier (8 tanks)</td>
+                  <td style="text-align:right">20,177,440</td>
+                  <td class="pct-cell pct-mid">41.4%</td>
+                  <td class="pct-cell pct-low">1.6%</td>
+                  <td class="pct-cell pct-mid-low">21.5%</td>
+                </tr>
+                <tr>
+                  <td><strong>Stream B</strong></td>
+                  <td>Compressed Air System</td>
+                  <td style="text-align:right">223,100</td>
+                  <td class="pct-cell pct-low">19.6%</td>
+                  <td class="pct-cell pct-low">0.0%</td>
+                  <td class="pct-cell pct-low">9.8%</td>
+                </tr>
+                <tr>
+                  <td><strong>Stream B</strong></td>
+                  <td>Panels</td>
+                  <td style="text-align:right">1,099,290</td>
+                  <td class="pct-cell pct-low">0.0%</td>
+                  <td class="pct-cell pct-low">0.0%</td>
+                  <td class="pct-cell pct-low">0.0%</td>
+                </tr>
+                <tr class="totals">
+                  <td colspan="2">LCL TOTAL (BQ-weighted)</td>
+                  <td style="text-align:right">42,999,660</td>
+                  <td class="pct-cell pct-mid">66.9%</td>
+                  <td class="pct-cell pct-mid-low">33.6%</td>
+                  <td class="pct-cell pct-mid">50.2%</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="sub-header">Tank-Level Detail (16 tanks)</div>
+            <table class="wbs">
+              <thead>
+                <tr>
+                  <th>Tank ID</th>
+                  <th>Description</th>
+                  <th style="text-align:right">BQ Value (RM)</th>
+                  <th style="text-align:center">Procurement %</th>
+                  <th style="text-align:center">Installation %</th>
+                  <th style="text-align:center">Combined %</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>LCL.L.A.1</td><td>Tank A1-1</td><td style="text-align:right">2,522,180</td><td class="pct-cell pct-high">100.0%</td><td class="pct-cell pct-high">94.3%</td><td class="pct-cell pct-high">97.1%</td></tr>
+                <tr><td>LCL.L.A.2</td><td>Tank A1-2</td><td style="text-align:right">2,522,180</td><td class="pct-cell pct-high">100.0%</td><td class="pct-cell pct-high">99.6%</td><td class="pct-cell pct-high">99.8%</td></tr>
+                <tr><td>LCL.L.A.3</td><td>Tank A1-3</td><td style="text-align:right">2,522,180</td><td class="pct-cell pct-high">100.0%</td><td class="pct-cell pct-high">99.6%</td><td class="pct-cell pct-high">99.8%</td></tr>
+                <tr><td>LCL.L.A.4</td><td>Tank A1-4</td><td style="text-align:right">2,522,180</td><td class="pct-cell pct-high">100.0%</td><td class="pct-cell pct-high">99.6%</td><td class="pct-cell pct-high">99.8%</td></tr>
+                <tr><td>LCL.L.A.5</td><td>Tank A2-1</td><td style="text-align:right">2,522,180</td><td class="pct-cell pct-high">100.0%</td><td class="pct-cell pct-mid">46.5%</td><td class="pct-cell pct-mid">73.2%</td></tr>
+                <tr><td>LCL.L.A.6</td><td>Tank A2-2</td><td style="text-align:right">2,522,180</td><td class="pct-cell pct-high">100.0%</td><td class="pct-cell pct-mid">46.5%</td><td class="pct-cell pct-mid">73.2%</td></tr>
+                <tr><td>LCL.L.A.7</td><td>Tank A2-3</td><td style="text-align:right">2,522,180</td><td class="pct-cell pct-high">100.0%</td><td class="pct-cell pct-mid-low">27.1%</td><td class="pct-cell pct-mid">63.6%</td></tr>
+                <tr><td>LCL.L.A.8</td><td>Tank A2-4</td><td style="text-align:right">2,522,180</td><td class="pct-cell pct-high">100.0%</td><td class="pct-cell pct-mid">46.5%</td><td class="pct-cell pct-mid">73.2%</td></tr>
+                <tr><td>LCL.L.B.1</td><td>Tank B1-1</td><td style="text-align:right">2,522,180</td><td class="pct-cell pct-high">89.1%</td><td class="pct-cell pct-low">3.4%</td><td class="pct-cell pct-mid-low">46.3%</td></tr>
+                <tr><td>LCL.L.B.2</td><td>Tank B1-2</td><td style="text-align:right">2,522,180</td><td class="pct-cell pct-high">89.1%</td><td class="pct-cell pct-low">1.1%</td><td class="pct-cell pct-mid-low">45.1%</td></tr>
+                <tr><td>LCL.L.B.3</td><td>Tank B1-3</td><td style="text-align:right">2,522,180</td><td class="pct-cell pct-mid">69.8%</td><td class="pct-cell pct-low">1.3%</td><td class="pct-cell pct-mid-low">35.5%</td></tr>
+                <tr><td>LCL.L.B.4</td><td>Tank B1-4</td><td style="text-align:right">2,522,180</td><td class="pct-cell pct-low">16.7%</td><td class="pct-cell pct-low">1.8%</td><td class="pct-cell pct-low">9.2%</td></tr>
+                <tr><td>LCL.L.B.5</td><td>Tank B2-1</td><td style="text-align:right">2,522,180</td><td class="pct-cell pct-low">16.7%</td><td class="pct-cell pct-low">0.7%</td><td class="pct-cell pct-low">8.7%</td></tr>
+                <tr><td>LCL.L.B.6</td><td>Tank B2-2</td><td style="text-align:right">2,522,180</td><td class="pct-cell pct-low">16.7%</td><td class="pct-cell pct-low">0.7%</td><td class="pct-cell pct-low">8.7%</td></tr>
+                <tr><td>LCL.L.B.7</td><td>Tank B2-3</td><td style="text-align:right">2,522,180</td><td class="pct-cell pct-low">16.7%</td><td class="pct-cell pct-low">1.9%</td><td class="pct-cell pct-low">9.3%</td></tr>
+                <tr><td>LCL.L.B.8</td><td>Tank B2-4</td><td style="text-align:right">2,522,180</td><td class="pct-cell pct-low">16.2%</td><td class="pct-cell pct-low">1.9%</td><td class="pct-cell pct-low">9.0%</td></tr>
+              </tbody>
+            </table>
+
+            <div class="sub-header">Activity Detail — example: LCL.L.A.5 (Tank A2-1) <span style="font-weight: 400; color: var(--muted); text-transform: none; letter-spacing: 0;">— each tank rolls up from 11 activities. Click any tank row above to expand its activities.</span></div>
+            <table class="wbs">
+              <thead>
+                <tr>
+                  <th>Activity</th>
+                  <th>Description</th>
+                  <th>Disc.</th>
+                  <th>Vendor</th>
+                  <th style="text-align:right">RM Value</th>
+                  <th style="text-align:center">Procurement</th>
+                  <th style="text-align:center">Install %</th>
+                  <th>Target Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="milestone-row"><td>LCL.L.A.5.1</td><td>Completed WTT & Handover to M&E</td><td><span class="disc-tag cs">C&S</span></td><td>—</td><td style="text-align:right">milestone</td><td style="text-align:center"><span class="proc-stage s100">100% Delivered</span></td><td class="pct-cell pct-mid">50.0%</td><td>—</td></tr>
+                <tr class="activity-row"><td>LCL.L.A.5.2</td><td>SS Lamella Plates</td><td><span class="disc-tag mech">Mech</span></td><td>Valmech</td><td style="text-align:right">1,338,923</td><td style="text-align:center"><span class="proc-stage s100">100% Delivered</span></td><td class="pct-cell pct-low">0.0%</td><td>—</td></tr>
+                <tr class="milestone-row"><td>LCL.L.A.5.3</td><td>Handover of Tank Launders Beam</td><td><span class="disc-tag cs">C&S</span></td><td>—</td><td style="text-align:right">milestone</td><td style="text-align:center"><span class="proc-stage s100">100% Delivered</span></td><td class="pct-cell pct-high">100.0%</td><td>—</td></tr>
+                <tr class="activity-row"><td>LCL.L.A.5.4</td><td>SS Decanting Launders</td><td><span class="disc-tag mech">Mech</span></td><td>Valmech</td><td style="text-align:right">488,487</td><td style="text-align:center"><span class="proc-stage s100">100% Delivered</span></td><td class="pct-cell pct-high">100.0%</td><td>—</td></tr>
+                <tr class="activity-row"><td>LCL.L.A.5.5</td><td>Cast-in Pipes (55 MSCL + 20 others)</td><td><span class="disc-tag mech">Mech</span></td><td>—</td><td style="text-align:right">47,500</td><td style="text-align:center"><span class="proc-stage s100">100% Delivered</span></td><td class="pct-cell pct-high">100.0%</td><td>—</td></tr>
+                <tr class="milestone-row"><td>LCL.L.A.5.6</td><td>Handover of Tank Below Soffit</td><td><span class="disc-tag cs">C&S</span></td><td>—</td><td style="text-align:right">milestone</td><td style="text-align:center"><span class="proc-stage s100">100% Delivered</span></td><td class="pct-cell pct-high">100.0%</td><td>—</td></tr>
+                <tr class="activity-row"><td>LCL.L.A.5.7</td><td>DN200 MSCL Soffit Pipeworks</td><td><span class="disc-tag mech">Mech</span></td><td>CHS Steelworks</td><td style="text-align:right">340,600</td><td style="text-align:center"><span class="proc-stage s100">100% Delivered</span></td><td class="pct-cell pct-high">100.0%</td><td>—</td></tr>
+                <tr class="activity-row"><td>LCL.L.A.5.8</td><td>DN200 Knife Gate Valve c/w Pneumatic Actuator</td><td><span class="disc-tag mech">Mech</span></td><td>AVK / FESTO</td><td style="text-align:right">218,660</td><td style="text-align:center"><span class="proc-stage s100">100% Delivered</span></td><td class="pct-cell pct-high">100.0%</td><td>—</td></tr>
+                <tr class="activity-row"><td>LCL.L.A.5.9</td><td>Desludging Valves & Pipeworks</td><td><span class="disc-tag mech">Mech</span></td><td>AVK / CHS</td><td style="text-align:right">77,010</td><td style="text-align:center"><span class="proc-stage s100">100% Delivered</span></td><td class="pct-cell pct-high">100.0%</td><td>—</td></tr>
+                <tr class="activity-row"><td>LCL.L.A.5.10</td><td>Flushing Water Pipeworks</td><td><span class="disc-tag mech">Mech</span></td><td>Engtex</td><td style="text-align:right">8,000</td><td style="text-align:center"><span class="proc-stage s100">100% Delivered</span></td><td class="pct-cell pct-low">0.0%</td><td>—</td></tr>
+                <tr class="activity-row"><td>LCL.L.A.5.11</td><td>Calorimetric Flowswitch</td><td><span class="disc-tag mech">Mech</span></td><td>IFM</td><td style="text-align:right">3,000</td><td style="text-align:center"><span class="proc-stage s100">100% Delivered</span></td><td class="pct-cell pct-low">0.0%</td><td>—</td></tr>
+                <tr class="totals">
+                  <td colspan="4">TANK A2-1 ROLLUP</td>
+                  <td style="text-align:right">2,522,180</td>
+                  <td class="pct-cell pct-high">100.0%</td>
+                  <td class="pct-cell pct-mid">46.5%</td>
+                  <td>Combined: <strong>73.2%</strong></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div style="margin-top: 14px; padding: 10px 12px; background: #f4f8fb; border-left: 3px solid var(--teal); border-radius: 4px; font-size: 12px; color: var(--muted);">
+              <strong style="color: var(--navy);">How it rolls up:</strong> activities marked "milestone" carry zero RM weight (handover gates), so they don't affect the rollup. Tank A2-1 procurement is 100% (everything delivered), but installation is only 46.5% because the biggest line item — SS Lamella Plates (RM 1.34M) — is still at 0% installed. Combined = 0.5 × 100% + 0.5 × 46.5% = 73.2%.
+            </div>
+          </div>
+        </section>
+
+        <!-- === TODAY'S REPORTS === -->
+        <section class="content-section" id="reports">
+          <h2 class="section-h2">Today's Daily Reports <span class="h2-meta">4 of 4 submitted · <a href="#" onclick="document.querySelector('[data-tab=lcl-archive]').click(); return false;" class="link-arrow">View full archive →</a></span></h2>
+
+          <div class="report-card">
+            <div>
+              <div class="who">Razif <span style="font-weight: 400; color: var(--muted)">· Supervisor</span></div>
+              <div class="meta-line"><span class="disc-tag cs">C&S</span> · submitted 14 May at 16:32</div>
+              <div class="activity">Stream B Tank B1-1 — Handover of Tank Below Soffit prep (<strong>LCL.L.B.1.6</strong>) brought to 75%. Backfilling north area continuing. Coordinated with mechanical team on handover gate. Manpower: 10 (own 4 + subcon 6).</div>
+            </div>
+            <div class="right-col">
+              <span class="status approved">Approved</span>
+              <div class="photos">3 photos</div>
+            </div>
+          </div>
+
+          <div class="report-card">
+            <div>
+              <div class="who">Hisham <span style="font-weight: 400; color: var(--muted)">· Supervisor</span></div>
+              <div class="meta-line"><span class="disc-tag mech">Mechanical</span> · submitted 14 May at 16:18</div>
+              <div class="activity">Stream A Tank A2-3 — SS Decanting Launders (<strong>LCL.L.A.7.4</strong>) installation continuing, currently 50%. SS Lamella Plates (<strong>LCL.L.A.7.2</strong>) — awaiting lift schedule from Valmech. Manpower: 12 (own 4 + subcon 8). Issue raised on bolt-pattern mismatch tank A2-3.</div>
+            </div>
+            <div class="right-col">
+              <span class="status approved">Approved</span>
+              <div class="photos">4 photos</div>
+            </div>
+          </div>
+
+          <div class="report-card">
+            <div>
+              <div class="who">Lim <span style="font-weight: 400; color: var(--muted)">· Supervisor</span></div>
+              <div class="meta-line"><span class="disc-tag mech">Mechanical (Piping)</span> · submitted 14 May at 15:55</div>
+              <div class="activity">Stream B Tank B1-1 — DN200 MSCL Soffit Pipeworks (<strong>LCL.L.B.1.7</strong>) bay 3 erection, now 30% installed. Coordinating with CHS Steelworks on next consignment. QC inspection on weld joints — awaiting engineer sign-off. Manpower: 8 (own 2 + subcon 6).</div>
+            </div>
+            <div class="right-col">
+              <span class="status review">Engineer Review</span>
+              <div class="photos">2 photos</div>
+            </div>
+          </div>
+
+          <div class="report-card">
+            <div>
+              <div class="who">Kumar <span style="font-weight: 400; color: var(--muted)">· Supervisor</span></div>
+              <div class="meta-line"><span class="disc-tag elec">Electrical</span> · submitted 14 May at 16:42</div>
+              <div class="activity">Stream A Panels — Local Control Panel cable tray installation (preparation for <strong>LCL.P.A.1.1</strong> to <strong>LCL.P.A.1.8</strong>). 15m additional tray installed today. Awaiting LCP delivery before termination work. Manpower: 8 (own 4 + subcon 4).</div>
+            </div>
+            <div class="right-col">
+              <span class="status pending">Pending TL Approval</span>
+              <div class="photos">3 photos</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- === ACTIVITIES & PROCUREMENT === -->
+        <section class="content-section" id="activities">
+          <h2 class="section-h2">Activities & Procurement <span class="h2-meta">Activities ARE the material records — same source as tracker</span></h2>
+
+          <div class="card" style="margin-bottom: 16px;">
+            <h3>Procurement Stage Summary <span class="meta">count of activities × stage</span></h3>
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 10px;">
+              <div style="padding: 12px; border: 1px solid var(--border); border-radius: 8px; text-align: center;">
+                <span class="proc-stage s0">0% Not Procured</span>
+                <div style="font-size: 22px; font-weight: 600; color: var(--navy); margin-top: 8px;">42</div>
+                <div style="font-size: 11px; color: var(--muted);">RM 4.3M scope</div>
+              </div>
+              <div style="padding: 12px; border: 1px solid var(--border); border-radius: 8px; text-align: center;">
+                <span class="proc-stage s25">25% Procured</span>
+                <div style="font-size: 22px; font-weight: 600; color: var(--navy); margin-top: 8px;">25</div>
+                <div style="font-size: 11px; color: var(--muted);">RM 12.1M scope</div>
+              </div>
+              <div style="padding: 12px; border: 1px solid var(--border); border-radius: 8px; text-align: center;">
+                <span class="proc-stage s50">50% Fabrication</span>
+                <div style="font-size: 22px; font-weight: 600; color: var(--navy); margin-top: 8px;">8</div>
+                <div style="font-size: 11px; color: var(--muted);">RM 2.4M scope</div>
+              </div>
+              <div style="padding: 12px; border: 1px solid var(--border); border-radius: 8px; text-align: center;">
+                <span class="proc-stage s75">75% Ready</span>
+                <div style="font-size: 22px; font-weight: 600; color: var(--navy); margin-top: 8px;">5</div>
+                <div style="font-size: 11px; color: var(--muted);">RM 1.0M scope</div>
+              </div>
+              <div style="padding: 12px; border: 1px solid var(--border); border-radius: 8px; text-align: center;">
+                <span class="proc-stage s100">100% Delivered</span>
+                <div style="font-size: 22px; font-weight: 600; color: var(--navy); margin-top: 8px;">93</div>
+                <div style="font-size: 11px; color: var(--muted);">RM 23.2M scope</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Activity List <span class="meta">filterable · 173 activities total · showing 12 sample rows</span></h3>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
+              <select style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;"><option>All Streams</option><option>Stream A</option><option>Stream B</option></select>
+              <select style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;"><option>All Sections</option><option>Lamella Clarifier</option><option>Compressed Air</option><option>Panels</option></select>
+              <select style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;">
+                <option>All Tanks</option>
+                <optgroup label="Stream A">
+                  <option>A1-1 (LCL.L.A.1)</option>
+                  <option>A1-2 (LCL.L.A.2)</option>
+                  <option>A1-3 (LCL.L.A.3)</option>
+                  <option>A1-4 (LCL.L.A.4)</option>
+                  <option>A2-1 (LCL.L.A.5)</option>
+                  <option>A2-2 (LCL.L.A.6)</option>
+                  <option>A2-3 (LCL.L.A.7)</option>
+                  <option>A2-4 (LCL.L.A.8)</option>
+                </optgroup>
+                <optgroup label="Stream B">
+                  <option>B1-1 (LCL.L.B.1)</option>
+                  <option>B1-2 (LCL.L.B.2)</option>
+                  <option>B1-3 (LCL.L.B.3)</option>
+                  <option>B1-4 (LCL.L.B.4)</option>
+                  <option>B2-1 (LCL.L.B.5)</option>
+                  <option>B2-2 (LCL.L.B.6)</option>
+                  <option>B2-3 (LCL.L.B.7)</option>
+                  <option>B2-4 (LCL.L.B.8)</option>
+                </optgroup>
+              </select>
+              <select style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;"><option>All Disciplines</option><option>C&S</option><option>Mechanical</option><option>Electrical</option><option>Instrument</option></select>
+              <select style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;"><option>All Stages</option><option>0% Not Procured</option><option>25% Procured</option><option>50% In Fabrication</option><option>75% Ready for Delivery</option><option>100% Delivered</option></select>
+              <select style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;"><option>All Vendors</option><option>Valmech</option><option>AVK / FESTO</option><option>AVK / CHS</option><option>CHS Steelworks</option><option>Engtex</option><option>IFM</option></select>
+              <button style="padding: 6px 14px; background: white; color: var(--navy); border: 1px solid var(--border); border-radius: 6px; font-size: 12px; cursor: pointer;">Export to Excel</button>
+            </div>
+            <table class="wbs">
+              <thead>
+                <tr>
+                  <th>Activity Code</th>
+                  <th>Description</th>
+                  <th>Disc.</th>
+                  <th>Vendor</th>
+                  <th style="text-align:right">RM Value</th>
+                  <th style="text-align:center">Procurement</th>
+                  <th style="text-align:center">Install %</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>LCL.L.A.7.2</td><td>SS Lamella Plates (Tank A2-3)</td><td><span class="disc-tag mech">Mech</span></td><td>Valmech</td><td style="text-align:right">1,338,923</td><td style="text-align:center"><span class="proc-stage s100">100% Delivered</span></td><td class="pct-cell pct-low">0.0%</td></tr>
+                <tr><td>LCL.L.B.1.2</td><td>SS Lamella Plates (Tank B1-1)</td><td><span class="disc-tag mech">Mech</span></td><td>Valmech</td><td style="text-align:right">1,338,923</td><td style="text-align:center"><span class="proc-stage s100">100% Delivered</span></td><td class="pct-cell pct-low">0.0%</td></tr>
+                <tr><td>LCL.L.B.3.2</td><td>SS Lamella Plates (Tank B1-3)</td><td><span class="disc-tag mech">Mech</span></td><td>Valmech</td><td style="text-align:right">1,338,923</td><td style="text-align:center"><span class="proc-stage s75">75% Ready for Delivery</span></td><td class="pct-cell pct-low">0.0%</td></tr>
+                <tr><td>LCL.L.B.4.2</td><td>SS Lamella Plates (Tank B1-4)</td><td><span class="disc-tag mech">Mech</span></td><td>Valmech</td><td style="text-align:right">1,338,923</td><td style="text-align:center"><span class="proc-stage s25">25% Procured</span></td><td class="pct-cell pct-low">0.0%</td></tr>
+                <tr><td>LCL.L.B.5.2</td><td>SS Lamella Plates (Tank B2-1)</td><td><span class="disc-tag mech">Mech</span></td><td>Valmech</td><td style="text-align:right">1,338,923</td><td style="text-align:center"><span class="proc-stage s25">25% Procured</span></td><td class="pct-cell pct-low">0.0%</td></tr>
+                <tr><td>LCL.L.B.1.7</td><td>DN200 MSCL Soffit Pipeworks (Tank B1-1)</td><td><span class="disc-tag mech">Mech</span></td><td>CHS Steelworks</td><td style="text-align:right">340,600</td><td style="text-align:center"><span class="proc-stage s50">50% In Fabrication</span></td><td class="pct-cell pct-low">20.0%</td></tr>
+                <tr><td>LCL.L.B.1.8</td><td>DN200 Knife Gate Valve (Tank B1-1)</td><td><span class="disc-tag mech">Mech</span></td><td>AVK / FESTO</td><td style="text-align:right">218,660</td><td style="text-align:center"><span class="proc-stage s75">75% Ready for Delivery</span></td><td class="pct-cell pct-low">0.0%</td></tr>
+                <tr><td>LCL.L.B.1.9</td><td>Desludging Valves (Tank B1-1)</td><td><span class="disc-tag mech">Mech</span></td><td>AVK / CHS</td><td style="text-align:right">77,010</td><td style="text-align:center"><span class="proc-stage s50">50% In Fabrication</span></td><td class="pct-cell pct-low">0.0%</td></tr>
+                <tr><td>LCL.C.A.1.5</td><td>Compressed Air Pipeworks (Stream A)</td><td><span class="disc-tag mech">Mech</span></td><td>—</td><td style="text-align:right">24,000</td><td style="text-align:center"><span class="proc-stage s0">0% Not Procured</span></td><td class="pct-cell pct-low">0.0%</td></tr>
+                <tr><td>LCL.P.A.1.1</td><td>Local Control Panel — Tank A1-1</td><td><span class="disc-tag elec">Elec</span></td><td>—</td><td style="text-align:right">118,000</td><td style="text-align:center"><span class="proc-stage s0">0% Not Procured</span></td><td class="pct-cell pct-low">0.0%</td></tr>
+                <tr><td>LCL.P.A.1.9</td><td>Stream A Supervisory Panel (SP)</td><td><span class="disc-tag elec">Elec</span></td><td>—</td><td style="text-align:right">155,290</td><td style="text-align:center"><span class="proc-stage s0">0% Not Procured</span></td><td class="pct-cell pct-low">0.0%</td></tr>
+                <tr><td>LCL.C.A.1.7</td><td>Compressed Air Pressure Gauges</td><td><span class="disc-tag inst">Inst</span></td><td>—</td><td style="text-align:right">1,500</td><td style="text-align:center"><span class="proc-stage s0">0% Not Procured</span></td><td class="pct-cell pct-low">0.0%</td></tr>
+                <tr><td colspan="7" style="text-align: center; color: var(--muted); font-style: italic; padding: 12px;">+ 161 more activities · <a href="#" class="link-arrow">View all →</a></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- === DELIVERY ORDERS === -->
+        <section class="content-section" id="deliveries">
+          <h2 class="section-h2">Delivery Orders <span class="h2-meta">Per-DO records from CIP Delivery & Lamella Launders tracking</span></h2>
+
+          <div class="card" style="margin-bottom: 16px;">
+            <h3>Recent Delivery Orders <span class="meta">log of inbound deliveries to site</span></h3>
+            <table class="wbs">
+              <thead>
+                <tr>
+                  <th>DO Number</th>
+                  <th>Date</th>
+                  <th>Supplier</th>
+                  <th>Item Type</th>
+                  <th style="text-align:right">Qty</th>
+                  <th>Linked Activity</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>DO-2604/010</td><td>10 Apr 2026</td><td>CHS Steelworks</td><td>DI DF 925mmL pipe</td><td style="text-align:right">8 nos</td><td>LCL.L.B.*.7 — Soffit Pipeworks</td></tr>
+                <tr><td>DO-2604/007</td><td>07 Apr 2026</td><td>CHS Steelworks</td><td>DI DF 925mmL + 950mmL</td><td style="text-align:right">13 nos</td><td>LCL.L.B.*.7 — Soffit Pipeworks</td></tr>
+                <tr><td>DO-2603/026</td><td>27 Mar 2026</td><td>CHS Steelworks</td><td>MSCL DF 800mmL + SF 775mmL</td><td style="text-align:right">40 nos</td><td>LCL.L.B.*.7 — Soffit Pipeworks</td></tr>
+                <tr><td>DO-2603/012</td><td>07 Mar 2026</td><td>CHS Steelworks</td><td>MSCL DF 800mmL + SF 775mmL</td><td style="text-align:right">40 nos</td><td>LCL.L.B.*.7 — Soffit Pipeworks</td></tr>
+                <tr><td>DO-2602/008</td><td>24 Feb 2026</td><td>CHS Steelworks</td><td>DI DF 925mmL + 950mmL</td><td style="text-align:right">22 nos</td><td>LCL.L.B.*.7 — Soffit Pipeworks</td></tr>
+                <tr><td>DO-2602/007</td><td>12 Feb 2026</td><td>CHS Steelworks</td><td>MSCL DF + SF</td><td style="text-align:right">36 nos</td><td>LCL.L.B.*.7 — Soffit Pipeworks</td></tr>
+                <tr><td>DO-2601/017</td><td>29 Jan 2026</td><td>Combiway</td><td>DI DF 950mmL</td><td style="text-align:right">2 nos</td><td>LCL.L.B.*.7 — Soffit Pipeworks</td></tr>
+                <tr><td>DO-2601/012</td><td>28 Jan 2026</td><td>Combiway</td><td>DI DF 925mmL</td><td style="text-align:right">2 nos</td><td>LCL.L.B.*.7 — Soffit Pipeworks</td></tr>
+                <tr><td>DO-2601/001</td><td>17 Jan 2026</td><td>Combiway</td><td>MSCL DF + SF</td><td style="text-align:right">40 nos</td><td>LCL.L.B.*.7 — Soffit Pipeworks</td></tr>
+                <tr><td colspan="6" style="text-align: center; color: var(--muted); font-style: italic; padding: 12px;">+ 13 earlier DOs · <a href="#" class="link-arrow">View full delivery history →</a></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card">
+            <h3>Awaiting Delivery <span class="meta">activities at 75% Ready for Delivery — confirm arrival to advance to 100%</span></h3>
+            <table class="wbs">
+              <thead>
+                <tr>
+                  <th>Activity</th>
+                  <th>Description</th>
+                  <th>Vendor</th>
+                  <th style="text-align:right">RM Value</th>
+                  <th>Days at 75%</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>LCL.L.B.1.8</td><td>DN200 Knife Gate Valve (Tank B1-1)</td><td>AVK / FESTO</td><td style="text-align:right">218,660</td><td style="color: var(--amber);">12 days</td></tr>
+                <tr><td>LCL.L.B.2.8</td><td>DN200 Knife Gate Valve (Tank B1-2)</td><td>AVK / FESTO</td><td style="text-align:right">218,660</td><td style="color: var(--amber);">12 days</td></tr>
+                <tr><td>LCL.L.B.3.2</td><td>SS Lamella Plates (Tank B1-3)</td><td>Valmech</td><td style="text-align:right">1,338,923</td><td style="color: var(--green);">3 days</td></tr>
+                <tr><td>LCL.L.B.3.8</td><td>DN200 Knife Gate Valve (Tank B1-3)</td><td>AVK / FESTO</td><td style="text-align:right">218,660</td><td>5 days</td></tr>
+                <tr><td>LCL.L.A.7.1</td><td>Compressed Air Pre-handover (milestone)</td><td>—</td><td style="text-align:right">milestone</td><td>2 days</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- === TRENDS === -->
+        <section class="content-section" id="trends">
+          <h2 class="section-h2">Trends</h2>
+          <div class="grid-3">
+            <div class="card">
+              <h3>Manpower Trend <span class="meta">last 14 days</span></h3>
+              <div class="chart-wrap"><canvas id="mp-chart"></canvas></div>
+            </div>
+            <div class="card">
+              <h3>Progress (Proc / Install / Combined)</h3>
+              <div class="chart-wrap"><canvas id="prog-chart"></canvas></div>
+            </div>
+            <div class="card">
+              <h3>Materials Consumption <span class="meta">% vs plan</span></h3>
+              <div class="chart-wrap"><canvas id="consumption-chart"></canvas></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- === SITE PHOTOS === -->
+        <section class="content-section" id="photos">
+          <h2 class="section-h2">Site Photos — Today <span class="h2-meta">12 uploaded from daily reports · <a href="#" class="link-arrow">View all photos →</a></span></h2>
+          <div class="card">
+            <div class="photo-strip">
+              <div class="photo">C&S · 09:14</div>
+              <div class="photo">Mech · 10:32</div>
+              <div class="photo">Mech · 11:48</div>
+              <div class="photo">Mech · 13:20</div>
+              <div class="photo">Elec · 14:55</div>
+              <div class="photo">C&S · 15:30</div>
+              <div class="photo">Mech · 16:10</div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LCL REPORTS ARCHIVE ============ -->
+  <section class="view" id="lcl-archive">
+    <div class="breadcrumb">
+      Valmech <span class="sep">›</span> Projects <span class="sep">›</span> Rasau <span class="sep">›</span> Clarifier (LCL) <span class="sep">›</span> <strong style="color:var(--navy)">Daily Reports Archive</strong>
+    </div>
+    <h1 class="page-title">LCL — Daily Reports Archive</h1>
+    <div class="page-meta">
+      <span class="pill">All reports archived</span>
+      <span class="pill">128 records since project start</span>
+      <span class="pill">94% compliance</span>
+      Each report retains photos, attachments and full approval history for reference & audit. <a href="#" onclick="document.querySelector('[data-tab=lcl]').click(); return false;" class="link-arrow">← Back to LCL Dashboard</a>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="label">Reports This Week</div>
+        <div class="value">26 / 28</div>
+        <div class="delta up">93% compliance</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Pending Approval</div>
+        <div class="value">3</div>
+        <div class="delta flat">2 engineer · 1 team lead</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Issues Raised (week)</div>
+        <div class="value">5</div>
+        <div class="delta flat">2 resolved · 3 open</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Photos Uploaded</div>
+        <div class="value">87</div>
+        <div class="delta flat">last 7 days</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 16px">
+      <h3>Filter & Search</h3>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
+        <div>
+          <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px;">Date From</label>
+          <input type="date" value="2026-05-01" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;">
+        </div>
+        <div>
+          <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px;">Date To</label>
+          <input type="date" value="2026-05-14" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;">
+        </div>
+        <div>
+          <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px;">Supervisor</label>
+          <select style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;">
+            <option>All</option><option>Razif</option><option>Hisham</option><option>Lim</option><option>Kumar</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px;">Discipline</label>
+          <select style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;">
+            <option>All</option><option>C&S</option><option>Mechanical</option><option>Electrical</option><option>Instrument</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px;">Status</label>
+          <select style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;">
+            <option>All</option><option>Approved</option><option>Pending TL</option><option>Eng. Review</option>
+          </select>
+        </div>
+        <button style="padding: 7px 16px; background: var(--navy); color: white; border: none; border-radius: 6px; font-size: 13px; cursor: pointer;">Apply</button>
+        <button style="padding: 7px 16px; background: white; color: var(--navy); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; cursor: pointer;">Export to Excel</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Reports Log <span class="meta">Showing 14 of 128 records</span></h3>
+      <table class="wbs">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Submitter</th>
+            <th>Area</th>
+            <th>Key Activities</th>
+            <th style="text-align:center">Manpower</th>
+            <th style="text-align:center">Photos</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>14 May 2026</td><td>Razif</td><td>C&S</td><td>Steel erection cols A–C · grouting LCL-002</td>
+            <td style="text-align:center">10</td><td style="text-align:center">3</td>
+            <td><span class="status approved">Approved</span></td>
+            <td><a href="#" class="link-arrow" style="font-size: 12px">View →</a></td>
+          </tr>
+          <tr>
+            <td>14 May 2026</td><td>Hisham</td><td>Mechanical</td><td>Pump skid alignment · scraper installation prep</td>
+            <td style="text-align:center">12</td><td style="text-align:center">4</td>
+            <td><span class="status approved">Approved</span></td>
+            <td><a href="#" class="link-arrow" style="font-size: 12px">View →</a></td>
+          </tr>
+          <tr>
+            <td>14 May 2026</td><td>Lim</td><td>Mechanical (Piping)</td><td>200NB CS pipe erection bay 3 · spool LCL-P-208</td>
+            <td style="text-align:center">8</td><td style="text-align:center">2</td>
+            <td><span class="status review">Eng. Review</span></td>
+            <td><a href="#" class="link-arrow" style="font-size: 12px">View →</a></td>
+          </tr>
+          <tr>
+            <td>14 May 2026</td><td>Kumar</td><td>Electrical</td><td>Cable tray installation · panel termination prep</td>
+            <td style="text-align:center">8</td><td style="text-align:center">3</td>
+            <td><span class="status pending">Pending TL</span></td>
+            <td><a href="#" class="link-arrow" style="font-size: 12px">View →</a></td>
+          </tr>
+          <tr>
+            <td>13 May 2026</td><td>Razif</td><td>C&S</td><td>Backfilling north area · final touch-up LCL-002</td>
+            <td style="text-align:center">10</td><td style="text-align:center">2</td>
+            <td><span class="status approved">Approved</span></td>
+            <td><a href="#" class="link-arrow" style="font-size: 12px">View →</a></td>
+          </tr>
+          <tr>
+            <td>13 May 2026</td><td>Hisham</td><td>Mechanical</td><td>Scraper drive unit unboxing & inspection</td>
+            <td style="text-align:center">11</td><td style="text-align:center">5</td>
+            <td><span class="status approved">Approved</span></td>
+            <td><a href="#" class="link-arrow" style="font-size: 12px">View →</a></td>
+          </tr>
+          <tr>
+            <td>13 May 2026</td><td>Lim</td><td>Mechanical (Piping)</td><td>Spool fabrication bay 1 · QC inspection</td>
+            <td style="text-align:center">8</td><td style="text-align:center">3</td>
+            <td><span class="status approved">Approved</span></td>
+            <td><a href="#" class="link-arrow" style="font-size: 12px">View →</a></td>
+          </tr>
+          <tr>
+            <td>13 May 2026</td><td>Kumar</td><td>Electrical</td><td>Cable pulling main feeders</td>
+            <td style="text-align:center">7</td><td style="text-align:center">2</td>
+            <td><span class="status approved">Approved</span></td>
+            <td><a href="#" class="link-arrow" style="font-size: 12px">View →</a></td>
+          </tr>
+          <tr>
+            <td>12 May 2026</td><td>Razif</td><td>C&S</td><td>Concrete pour LCL-002 final section</td>
+            <td style="text-align:center">14</td><td style="text-align:center">6</td>
+            <td><span class="status approved">Approved</span></td>
+            <td><a href="#" class="link-arrow" style="font-size: 12px">View →</a></td>
+          </tr>
+          <tr>
+            <td>12 May 2026</td><td>Hisham</td><td>Mechanical</td><td>Anchor bolt installation · pump base prep</td>
+            <td style="text-align:center">10</td><td style="text-align:center">3</td>
+            <td><span class="status approved">Approved</span></td>
+            <td><a href="#" class="link-arrow" style="font-size: 12px">View →</a></td>
+          </tr>
+          <tr>
+            <td>12 May 2026</td><td>Lim</td><td>Mechanical (Piping)</td><td>Material receiving — CS pipe consignment 480m</td>
+            <td style="text-align:center">6</td><td style="text-align:center">4</td>
+            <td><span class="status approved">Approved</span></td>
+            <td><a href="#" class="link-arrow" style="font-size: 12px">View →</a></td>
+          </tr>
+          <tr>
+            <td>12 May 2026</td><td>Kumar</td><td>Electrical</td><td>Earthing system installation</td>
+            <td style="text-align:center">6</td><td style="text-align:center">2</td>
+            <td><span class="status approved">Approved</span></td>
+            <td><a href="#" class="link-arrow" style="font-size: 12px">View →</a></td>
+          </tr>
+          <tr style="background: #fafbfd;">
+            <td>11 May 2026</td><td colspan="6" style="color: var(--muted); font-style: italic;">4 reports — all approved (collapsed)</td>
+            <td><a href="#" class="link-arrow" style="font-size: 12px">Expand</a></td>
+          </tr>
+          <tr style="background: #fafbfd;">
+            <td>10 May 2026</td><td colspan="6" style="color: var(--muted); font-style: italic;">3 reports — 1 missing (Lim absent · approved leave)</td>
+            <td><a href="#" class="link-arrow" style="font-size: 12px">Expand</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ RASAU ROLLUP VIEW ============ -->
+  <section class="view" id="rasau">
+    <div class="breadcrumb">
+      Valmech <span class="sep">›</span> Projects <span class="sep">›</span> <strong style="color:var(--navy)">Rasau Project</strong>
+    </div>
+    <h1 class="page-title">Rasau Project — All Plants</h1>
+    <div class="page-meta">
+      <span class="pill">13 plants</span>
+      <span class="pill">Project Lead: M. Faizal</span>
+      <span class="pill">Mid-execution</span>
+      Reports filed today: 28 / 34 · 6 pending submission
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="label">Overall Progress</div>
+        <div class="value">38.4%</div>
+        <div class="delta up">▲ 1.8% this week</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Schedule Health</div>
+        <div class="value" style="color:var(--amber)">−9 days</div>
+        <div class="delta down">3 plants behind plan</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Open Issues</div>
+        <div class="value">47</div>
+        <div class="delta flat">9 high priority</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Manpower Today</div>
+        <div class="value">412</div>
+        <div class="delta up">▲ 18 vs last week</div>
+      </div>
+    </div>
+
+    <div class="section-title">Process Plants — Team Lead: A. Rahman (7 plants)</div>
+    <div class="plant-grid" style="margin-bottom: 20px;">
+      <div class="plant-card">
+        <div class="name"><span class="status-dot amber"></span>Clarifier (LCL)</div>
+        <div class="code">P-01 · Pilot</div>
+        <div class="progress">50.2%</div>
+        <span class="tag process">Process</span>
+      </div>
+      <div class="plant-card">
+        <div class="name"><span class="status-dot green"></span>Sedimentation Tank</div>
+        <div class="code">P-02</div>
+        <div class="progress">51.2%</div>
+        <span class="tag process">Process</span>
+      </div>
+      <div class="plant-card">
+        <div class="name"><span class="status-dot green"></span>Rapid Mix</div>
+        <div class="code">P-03</div>
+        <div class="progress">62.0%</div>
+        <span class="tag process">Process</span>
+      </div>
+      <div class="plant-card">
+        <div class="name"><span class="status-dot green"></span>Flocculation</div>
+        <div class="code">P-04</div>
+        <div class="progress">48.5%</div>
+        <span class="tag process">Process</span>
+      </div>
+      <div class="plant-card">
+        <div class="name"><span class="status-dot red"></span>Sand Filtration</div>
+        <div class="code">P-05</div>
+        <div class="progress">22.1%</div>
+        <span class="tag process">Process</span>
+      </div>
+      <div class="plant-card">
+        <div class="name"><span class="status-dot amber"></span>Backwash System</div>
+        <div class="code">P-06</div>
+        <div class="progress">31.4%</div>
+        <span class="tag process">Process</span>
+      </div>
+      <div class="plant-card">
+        <div class="name"><span class="status-dot green"></span>Distribution Pumping</div>
+        <div class="code">P-07</div>
+        <div class="progress">55.8%</div>
+        <span class="tag process">Process</span>
+      </div>
+    </div>
+
+    <div class="section-title">Chemical Plants — Team Lead: S. Tan (6 plants)</div>
+    <div class="plant-grid">
+      <div class="plant-card">
+        <div class="name"><span class="status-dot green"></span>Chemical Dosing A</div>
+        <div class="code">C-01</div>
+        <div class="progress">44.0%</div>
+        <span class="tag chemical">Chemical</span>
+      </div>
+      <div class="plant-card">
+        <div class="name"><span class="status-dot green"></span>Chemical Dosing B</div>
+        <div class="code">C-02</div>
+        <div class="progress">39.6%</div>
+        <span class="tag chemical">Chemical</span>
+      </div>
+      <div class="plant-card">
+        <div class="name"><span class="status-dot amber"></span>Chlorination</div>
+        <div class="code">C-03</div>
+        <div class="progress">28.3%</div>
+        <span class="tag chemical">Chemical</span>
+      </div>
+      <div class="plant-card">
+        <div class="name"><span class="status-dot green"></span>pH Adjustment</div>
+        <div class="code">C-04</div>
+        <div class="progress">41.2%</div>
+        <span class="tag chemical">Chemical</span>
+      </div>
+      <div class="plant-card">
+        <div class="name"><span class="status-dot red"></span>Sludge Treatment</div>
+        <div class="code">C-05</div>
+        <div class="progress">18.7%</div>
+        <span class="tag chemical">Chemical</span>
+      </div>
+      <div class="plant-card">
+        <div class="name"><span class="status-dot green"></span>Polymer Mixing</div>
+        <div class="code">C-06</div>
+        <div class="progress">36.1%</div>
+        <span class="tag chemical">Chemical</span>
+      </div>
+    </div>
+
+    <div class="grid-2-eq" style="margin-top: 20px">
+      <div class="card">
+        <h3>Plant Progress Comparison</h3>
+        <div class="chart-wrap" style="height: 280px"><canvas id="plants-chart"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Daily Reports — submission compliance <span class="meta">last 7 days</span></h3>
+        <div class="chart-wrap" style="height: 280px"><canvas id="reports-chart"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // Tab switching
+  document.querySelectorAll('nav.tabs button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.tab).classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    });
+  });
+
+  // Sidebar scroll-spy for LCL plant dashboard
+  const sideLinks = document.querySelectorAll('.plant-sidenav a');
+  const sideSections = Array.from(document.querySelectorAll('#lcl .content-section'));
+  function updateSideNav() {
+    const scrollPos = window.scrollY + 180;
+    let active = sideSections[0];
+    for (const s of sideSections) {
+      if (s.offsetTop <= scrollPos) active = s;
+    }
+    sideLinks.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + active.id);
+    });
+  }
+  window.addEventListener('scroll', updateSideNav);
+  sideLinks.forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) window.scrollTo({ top: target.offsetTop - 130, behavior: 'smooth' });
+    });
+  });
+
+  // Charts
+  const navy = '#0f2c4d', teal = '#117e8a', amber = '#d97706', green = '#16a34a', red = '#dc2626', gray = '#9ca3af';
+  const chartDefaults = {
+    plugins: { legend: { labels: { font: { size: 11 } } } },
+    scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { grid: { color: '#eef2f7' }, ticks: { font: { size: 10 } } } },
+    maintainAspectRatio: false,
+  };
+
+  new Chart(document.getElementById('mp-chart'), {
+    type: 'bar',
+    data: {
+      labels: ['1','2','3','4','5','6','7','8','9','10','11','12','13','14'],
+      datasets: [
+        { label: 'Own', data: [12,14,13,15,14,0,12,13,14,15,14,13,14,14], backgroundColor: navy },
+        { label: 'Subcon', data: [20,22,21,23,24,0,18,22,23,25,24,22,23,24], backgroundColor: teal },
+      ]
+    },
+    options: { ...chartDefaults, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true } } }
+  });
+
+  new Chart(document.getElementById('prog-chart'), {
+    type: 'line',
+    data: {
+      labels: ['Jan','Feb','Mar','Apr','May'],
+      datasets: [
+        { label: 'Procurement %', data: [12, 30, 48, 60, 67], borderColor: teal, tension: 0.3, fill: false },
+        { label: 'Installation %', data: [0, 4, 14, 25, 34], borderColor: amber, tension: 0.3, fill: false },
+        { label: 'Combined %', data: [6, 17, 31, 42, 50], borderColor: navy, backgroundColor: 'rgba(15,44,77,0.08)', tension: 0.3, fill: true },
+      ]
+    },
+    options: chartDefaults
+  });
+
+  new Chart(document.getElementById('consumption-chart'), {
+    type: 'bar',
+    data: {
+      labels: ['C&S', 'Mechanical', 'Electrical', 'Instrument'],
+      datasets: [
+        { label: 'Procurement %', data: [82, 76, 0, 0], backgroundColor: teal },
+        { label: 'Installation %', data: [54, 38, 0, 0], backgroundColor: amber },
+      ]
+    },
+    options: { ...chartDefaults, indexAxis: 'y' }
+  });
+
+  new Chart(document.getElementById('plants-chart'), {
+    type: 'bar',
+    data: {
+      labels: ['LCL','Sed.','Rapid Mix','Floc.','Sand Filt.','Backwash','Dist.','Dose A','Dose B','Chlor.','pH','Sludge','Polymer'],
+      datasets: [
+        { label: 'Plan %', data: [49,52,60,50,38,38,55,46,42,35,42,30,38], backgroundColor: '#cbd5e1' },
+        { label: 'Actual %', data: [50,51,62,49,22,31,56,44,40,28,41,19,36], backgroundColor: teal },
+      ]
+    },
+    options: chartDefaults
+  });
+
+  new Chart(document.getElementById('reports-chart'), {
+    type: 'line',
+    data: {
+      labels: ['8May','9','10','11','12','13','14'],
+      datasets: [
+        { label: 'Expected', data: [34,34,34,0,34,34,34], borderColor: gray, borderDash: [4,4], pointRadius: 0 },
+        { label: 'Submitted', data: [32,31,33,0,30,29,28], borderColor: teal, backgroundColor: 'rgba(17,126,138,0.1)', fill: true, tension: 0.3 },
+      ]
+    },
+    options: chartDefaults
+  });
+</script>
+
+</body>
+</html>
