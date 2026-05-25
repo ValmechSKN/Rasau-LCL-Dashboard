@@ -319,7 +319,8 @@
 </header>
 
 <nav class="tabs">
-  <button class="active" data-tab="lcl">LCL Plant Dashboard</button>
+  <button class="active" data-tab="lcl">LCL Plant</button>
+  <button data-tab="ffg">FFG Plant</button>
   <button data-tab="lcl-archive">LCL Reports Archive</button>
   <button data-tab="rasau">Rasau Rollup</button>
 </nav>
@@ -781,6 +782,51 @@
     </div>
   </section>
 
+  <!-- ============ FFG PLANT DASHBOARD (placeholder — wiring up in next iteration) ============ -->
+  <section class="view" id="ffg">
+    <div class="plant-layout">
+
+      <aside class="plant-sidenav">
+        <div class="sn-header">On this page</div>
+        <a href="#ffg-overview" class="active">Overview</a>
+        <a href="#ffg-progress">Progress Breakdown</a>
+        <a href="#ffg-reports">Today's Reports</a>
+        <a href="#ffg-activities">Activities & Procurement</a>
+        <a href="#ffg-cip">CIP Tracking</a>
+        <a href="#ffg-underdrain">Underdrain Steps</a>
+        <a href="#ffg-deliveries">Delivery Orders</a>
+      </aside>
+
+      <div class="plant-content">
+
+        <div class="breadcrumb">
+          Valmech <span class="sep">›</span> Projects <span class="sep">›</span> Rasau <span class="sep">›</span> <strong style="color:var(--navy)">Filter Plant (FFG)</strong>
+        </div>
+
+        <h1 class="page-title">Filter Plant (FFG) <span class="pill" style="background:#fef3c7; color:#92400e;">UNDER CONSTRUCTION</span></h1>
+
+        <div class="page-meta">
+          <span class="pill">Code: A65 5A8</span>
+          <span class="pill">2 Streams · 40 Tanks</span>
+          <span class="pill">BQ Value: RM 15.2M</span>
+        </div>
+
+        <section id="ffg-overview" style="margin-top: 24px;">
+          <div class="card" style="padding: 20px;">
+            <h2 style="margin-top: 0;">FFG Plant Dashboard</h2>
+            <p>Live data wiring in progress. This view will mirror the LCL Plant Dashboard structure with these additions:</p>
+            <ul>
+              <li><strong>CIP Tracking</strong> — matrix view of Cast-In-Pipe installations across 40 tanks</li>
+              <li><strong>Underdrain Steps</strong> — sequential step tracking per tank for HDPE underdrain installation</li>
+            </ul>
+            <p style="margin-bottom: 0;">Current data loaded: <span id="ffg-record-summary" style="font-weight: 600;">checking...</span></p>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </section>
+
   <!-- ============ LCL REPORTS ARCHIVE ============ -->
   <section class="view" id="lcl-archive">
     <div class="breadcrumb">
@@ -1192,19 +1238,56 @@
   });
 </script>
 
-<!-- ============ LIVE DATA WIRING (Phase A) ============
-  Fetches data.json from the same folder on page load, updates the
-  "Last refreshed" timestamp and the data-status indicator.
-  Dashboard numbers still come from baked-in baseline values for now.
-  Phase B will replace those with live computations.
+<!-- ============ LIVE DATA WIRING ============
+  Fetches data.json on page load, updates "Last refreshed" and data-status.
+  Provides shared helpers (getPlant, deduplicateByCode) for plant-specific views.
+  Phase 3.2 will replace dashboard's baseline numbers with live computations.
 -->
 <script>
+  // ===== Shared helpers =====
+
+  /**
+   * Get the Plant for a row. Falls back to deriving from Activity Code prefix
+   * (LCL.* → LCL, FFG.* → FFG) for rows where the Plant column is missing.
+   */
+  function getPlant(row) {
+    if (row.Plant) return row.Plant;
+    const code = row['Activity Code'] || row.Title || '';
+    if (code.startsWith && code.startsWith('LCL.')) return 'LCL';
+    if (code.startsWith && code.startsWith('FFG.')) return 'FFG';
+    return null;
+  }
+
+  /**
+   * Deduplicate rows by Activity Code (or Title), keeping first occurrence.
+   * Defends against duplicate rows from partial imports.
+   */
+  function deduplicateByCode(rows, codeField) {
+    codeField = codeField || 'Title';
+    const seen = new Set();
+    return rows.filter(row => {
+      const code = row[codeField];
+      if (!code || seen.has(code)) return false;
+      seen.add(code);
+      return true;
+    });
+  }
+
+  /**
+   * Filter list rows by plant (using getPlant fallback logic).
+   */
+  function rowsForPlant(rows, plant) {
+    return (rows || []).filter(r => getPlant(r) === plant);
+  }
+
+  // ===== Main loader =====
+
   (async function loadLiveData() {
     const statusEl = document.getElementById('data-status');
     const tsEl = document.getElementById('last-refreshed-text');
+    const ffgSummaryEl = document.getElementById('ffg-record-summary');
 
     try {
-      // Cache-buster so we don't get a stale data.json from the browser cache
       const response = await fetch('./data.json?_t=' + Date.now(), { cache: 'no-store' });
       if (!response.ok) throw new Error('HTTP ' + response.status);
       const data = await response.json();
@@ -1219,7 +1302,7 @@
         tsEl.textContent = 'Last refreshed: ' + formatted;
       }
 
-      // 2. Update data-status banner with record counts
+      // 2. Update data-status banner with overall record counts
       if (statusEl) {
         const counts = Object.entries(data.lists)
           .map(([name, items]) => name.replace('LCL ', '') + ': ' + items.length)
@@ -1228,7 +1311,24 @@
         statusEl.style.color = '#14532d';
       }
 
-      // 3. Stash data globally so Phase B can use it for live calculations
+      // 3. Update FFG-specific record summary
+      if (ffgSummaryEl) {
+        const lists = data.lists || {};
+        const ffgActivities = deduplicateByCode(rowsForPlant(lists['LCL Activity Master'], 'FFG'));
+        const ffgDaily = rowsForPlant(lists['LCL Daily Report'], 'FFG');
+        const ffgProcurement = rowsForPlant(lists['LCL Procurement Update'], 'FFG');
+        const cipCount = (lists['CIP Tracking List'] || []).length;
+        const underdrainCount = (lists['Underdrain Tracking List'] || []).length;
+
+        ffgSummaryEl.innerHTML =
+          ffgActivities.length + ' activities · ' +
+          ffgDaily.length + ' daily reports · ' +
+          ffgProcurement.length + ' procurement updates · ' +
+          cipCount + ' CIP rows · ' +
+          underdrainCount + ' underdrain rows';
+      }
+
+      // 4. Stash data globally for future Phase 3.2 calculations
       window.__dashboardData = data;
       console.log('Live data loaded:', data);
 
@@ -1237,6 +1337,9 @@
       if (statusEl) {
         statusEl.innerHTML = '<strong>⚠ Live data not connected</strong> — showing baseline only';
         statusEl.style.color = '#9a3412';
+      }
+      if (ffgSummaryEl) {
+        ffgSummaryEl.textContent = '(could not load)';
       }
     }
   })();
