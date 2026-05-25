@@ -328,7 +328,7 @@
 <main>
 
   <div class="mockup-note" style="background: #e6f4ea; border: 1px solid #16a34a; color: #14532d;">
-    <strong>v1 — Day-zero snapshot from A65 5A7 LCL Tracker (14 May 2026 baseline).</strong> Progress Breakdown shows real tracker values. Today's Daily Reports, Delivery Orders, and Site Photos placeholders pending the Power Apps + data pipeline.
+    <strong>Multi-plant dashboard.</strong> LCL: day-zero baseline from A65 5A7 tracker (14 May 2026). FFG: live computed from SharePoint (50/50 procurement/installation weight — placeholder pending Ken's confirmation).
     <div id="data-status" style="margin-top: 8px; font-size: 0.9em; opacity: 0.85;">Loading live data...</div>
   </div>
 
@@ -782,7 +782,7 @@
     </div>
   </section>
 
-  <!-- ============ FFG PLANT DASHBOARD (placeholder — wiring up in next iteration) ============ -->
+  <!-- ============ FFG PLANT DASHBOARD ============ -->
   <section class="view" id="ffg">
     <div class="plant-layout">
 
@@ -799,27 +799,149 @@
 
       <div class="plant-content">
 
-        <div class="breadcrumb">
-          Valmech <span class="sep">›</span> Projects <span class="sep">›</span> Rasau <span class="sep">›</span> <strong style="color:var(--navy)">Filter Plant (FFG)</strong>
+        <!-- === OVERVIEW === -->
+        <div class="content-section" id="ffg-overview">
+          <div class="breadcrumb">
+            Valmech <span class="sep">›</span> Projects <span class="sep">›</span> Rasau <span class="sep">›</span> <strong style="color:var(--navy)">Filter Plant (FFG)</strong>
+          </div>
+          <h1 class="page-title">Filter Plant (FFG)</h1>
+          <div class="page-meta">
+            <span class="pill">Code: A65 5A8</span>
+            <span class="pill">2 Streams · 40 Tanks</span>
+            <span class="pill">BQ Value: RM 15.2M</span>
+            <span class="pill" id="ffg-meta-activities">-- activities</span>
+          </div>
+
+          <div class="kpi-row">
+            <div class="kpi">
+              <div class="label">Combined Progress</div>
+              <div class="value" id="ffg-kpi-combined">--</div>
+              <div class="delta flat" style="font-size:0.75em">weighted 50/50 (placeholder)</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Procurement</div>
+              <div class="value" style="color:var(--teal)" id="ffg-kpi-procurement">--</div>
+              <div class="delta flat" style="font-size:0.75em">BQ-weighted average</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Installation</div>
+              <div class="value" style="color:var(--amber)" id="ffg-kpi-installation">--</div>
+              <div class="delta flat" style="font-size:0.75em">BQ-weighted average</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Earned Value</div>
+              <div class="value" id="ffg-kpi-earned">--</div>
+              <div class="delta flat" id="ffg-kpi-earned-of">of RM 15.2M total</div>
+            </div>
+          </div>
         </div>
 
-        <h1 class="page-title">Filter Plant (FFG) <span class="pill" style="background:#fef3c7; color:#92400e;">UNDER CONSTRUCTION</span></h1>
+        <!-- === PROGRESS BREAKDOWN === -->
+        <section class="content-section" id="ffg-progress">
+          <h2 class="section-h2">Progress Breakdown <span class="h2-meta">Procurement % + Installation % → Combined % (weighted 50/50 — placeholder pending final weights)</span></h2>
+          <div class="card">
+            <div class="sub-header">Progress by Section</div>
+            <table class="wbs">
+              <thead>
+                <tr>
+                  <th>Stream</th>
+                  <th>Section</th>
+                  <th style="text-align:right">BQ Value (RM)</th>
+                  <th style="text-align:right">Activities</th>
+                  <th style="text-align:center">Procurement %</th>
+                  <th style="text-align:center">Installation %</th>
+                  <th style="text-align:center">Combined %</th>
+                </tr>
+              </thead>
+              <tbody id="ffg-section-table-body">
+                <tr><td colspan="7" style="text-align:center; opacity:0.6">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
 
-        <div class="page-meta">
-          <span class="pill">Code: A65 5A8</span>
-          <span class="pill">2 Streams · 40 Tanks</span>
-          <span class="pill">BQ Value: RM 15.2M</span>
-        </div>
+          <div class="card" style="margin-top: 16px;">
+            <div class="sub-header">Progress by Tank</div>
+            <table class="wbs" id="ffg-tank-table">
+              <thead>
+                <tr>
+                  <th>Stream</th>
+                  <th>Section</th>
+                  <th>Tank</th>
+                  <th style="text-align:right">BQ Value (RM)</th>
+                  <th style="text-align:right">Activities</th>
+                  <th style="text-align:center">Procurement %</th>
+                  <th style="text-align:center">Installation %</th>
+                  <th style="text-align:center">Combined %</th>
+                </tr>
+              </thead>
+              <tbody id="ffg-tank-table-body">
+                <tr><td colspan="8" style="text-align:center; opacity:0.6">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-        <section id="ffg-overview" style="margin-top: 24px;">
+        <!-- === TODAY'S REPORTS === -->
+        <section class="content-section" id="ffg-reports">
+          <h2 class="section-h2">Today's Reports <span class="h2-meta" id="ffg-reports-meta">--</span></h2>
           <div class="card" style="padding: 20px;">
-            <h2 style="margin-top: 0;">FFG Plant Dashboard</h2>
-            <p>Live data wiring in progress. This view will mirror the LCL Plant Dashboard structure with these additions:</p>
-            <ul>
-              <li><strong>CIP Tracking</strong> — matrix view of Cast-In-Pipe installations across 40 tanks</li>
-              <li><strong>Underdrain Steps</strong> — sequential step tracking per tank for HDPE underdrain installation</li>
+            <div class="kpi-row" style="margin-top: 0;">
+              <div class="kpi">
+                <div class="label">Reports today</div>
+                <div class="value" id="ffg-reports-today">--</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Own manpower</div>
+                <div class="value" id="ffg-reports-manpower-own">--</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Subcon manpower</div>
+                <div class="value" id="ffg-reports-manpower-subcon">--</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Total on site</div>
+                <div class="value" id="ffg-reports-manpower-total">--</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- === ACTIVITIES & PROCUREMENT === -->
+        <section class="content-section" id="ffg-activities">
+          <h2 class="section-h2">Activities & Procurement <span class="h2-meta" id="ffg-activities-meta">--</span></h2>
+          <div class="card" style="padding: 20px;">
+            <p style="margin-top: 0;">Per-activity drill-down coming in next iteration. Current rollup:</p>
+            <ul style="margin-bottom: 0;">
+              <li>Total activities: <strong id="ffg-activities-count">--</strong></li>
+              <li>By installation status: <span id="ffg-activities-install-status">--</span></li>
+              <li>By procurement stage: <span id="ffg-activities-procurement-status">--</span></li>
             </ul>
-            <p style="margin-bottom: 0;">Current data loaded: <span id="ffg-record-summary" style="font-weight: 600;">checking...</span></p>
+          </div>
+        </section>
+
+        <!-- === CIP TRACKING (Phase 3.3 fills this in) === -->
+        <section class="content-section" id="ffg-cip">
+          <h2 class="section-h2">CIP Tracking <span class="h2-meta" id="ffg-cip-meta">--</span></h2>
+          <div class="card" style="padding: 20px;">
+            <p style="margin-top: 0; margin-bottom: 0;">Cast-In-Pipe installation matrix (tanks × CIP items, fractional progress 0-1) — coming in Phase 3.3.</p>
+            <p style="margin-bottom: 0;">Current data: <strong id="ffg-cip-count">--</strong> tracking entries across <strong id="ffg-cip-tanks">--</strong> tanks.</p>
+          </div>
+        </section>
+
+        <!-- === UNDERDRAIN STEPS (Phase 3.3 fills this in) === -->
+        <section class="content-section" id="ffg-underdrain">
+          <h2 class="section-h2">Underdrain Steps <span class="h2-meta" id="ffg-underdrain-meta">--</span></h2>
+          <div class="card" style="padding: 20px;">
+            <p style="margin-top: 0; margin-bottom: 0;">9-step underdrain installation tracker per tank (Setting Out → Chemical Bolts → Levelling Angles → Unistruts → Assembly → Installation → Monopour → WTT → Handover) — coming in Phase 3.3.</p>
+            <p style="margin-bottom: 0;">Current data: <strong id="ffg-underdrain-count">--</strong> entries across <strong id="ffg-underdrain-tanks">--</strong> tanks.</p>
+          </div>
+        </section>
+
+        <!-- === DELIVERY ORDERS === -->
+        <section class="content-section" id="ffg-deliveries">
+          <h2 class="section-h2">Delivery Orders</h2>
+          <div class="card" style="padding: 20px;">
+            <p style="margin-top: 0; margin-bottom: 0;">Pending the Delivery Order Power App. Current: <strong id="ffg-deliveries-count">0</strong> records.</p>
           </div>
         </section>
 
@@ -1238,18 +1360,20 @@
   });
 </script>
 
-<!-- ============ LIVE DATA WIRING ============
+<!-- ============ LIVE DATA WIRING (Phase 3.2) ============
   Fetches data.json on page load, updates "Last refreshed" and data-status.
-  Provides shared helpers (getPlant, deduplicateByCode) for plant-specific views.
-  Phase 3.2 will replace dashboard's baseline numbers with live computations.
+  Provides shared helpers + a small calculation engine.
+  Renders the FFG plant view with live data.
 -->
 <script>
+  // ===== Configuration =====
+
+  // Placeholder weights — Ken will confirm the real procurement/installation split.
+  // To change later, update these two numbers and recompute.
+  const PROGRESS_WEIGHTS = { procurement: 0.5, installation: 0.5 };
+
   // ===== Shared helpers =====
 
-  /**
-   * Get the Plant for a row. Falls back to deriving from Activity Code prefix
-   * (LCL.* → LCL, FFG.* → FFG) for rows where the Plant column is missing.
-   */
   function getPlant(row) {
     if (row.Plant) return row.Plant;
     const code = row['Activity Code'] || row.Title || '';
@@ -1258,10 +1382,6 @@
     return null;
   }
 
-  /**
-   * Deduplicate rows by Activity Code (or Title), keeping first occurrence.
-   * Defends against duplicate rows from partial imports.
-   */
   function deduplicateByCode(rows, codeField) {
     codeField = codeField || 'Title';
     const seen = new Set();
@@ -1273,11 +1393,248 @@
     });
   }
 
-  /**
-   * Filter list rows by plant (using getPlant fallback logic).
-   */
   function rowsForPlant(rows, plant) {
     return (rows || []).filter(r => getPlant(r) === plant);
+  }
+
+  function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+
+  // ===== Calculation engine =====
+
+  function parseProcurementPct(stage) {
+    if (stage == null) return 0;
+    const m = String(stage).match(/^(\d+)\s*%/);
+    return m ? parseInt(m[1], 10) : 0;
+  }
+
+  /**
+   * Build per-activity index for a plant.
+   * Returns array of items: { activity, pct_proc, pct_inst, pct_combined, bq, earned }
+   */
+  function buildActivityIndex(data, plant) {
+    const lists = data.lists || {};
+    const activities = deduplicateByCode(rowsForPlant(lists['LCL Activity Master'] || [], plant));
+    const procurement = rowsForPlant(lists['LCL Procurement Update'] || [], plant);
+    const daily = rowsForPlant(lists['LCL Daily Report'] || [], plant);
+
+    const latestBy = (rows, codeField, dateField) => {
+      const out = {};
+      rows.forEach(r => {
+        const code = r[codeField];
+        if (!code) return;
+        const d = new Date(r[dateField] || 0);
+        if (!out[code] || d > new Date(out[code][dateField] || 0)) out[code] = r;
+      });
+      return out;
+    };
+
+    const procByCode = latestBy(procurement, 'Activity Code', 'Update Date');
+    const dailyByCode = latestBy(daily, 'Activity Code', 'Submission Date');
+
+    return activities.map(act => {
+      const code = act.Title;
+      const proc = procByCode[code];
+      const dly = dailyByCode[code];
+      const pctProc = parseProcurementPct(proc ? proc['New Stage'] : null);
+      const pctInst = dly ? Number(dly['New Install %'] || 0) : 0;
+      const pctCombined = pctProc * PROGRESS_WEIGHTS.procurement + pctInst * PROGRESS_WEIGHTS.installation;
+      const bq = Number(act['BQ Weight (RM)'] || 0);
+
+      return {
+        activity: act,
+        pct_proc: pctProc,
+        pct_inst: pctInst,
+        pct_combined: pctCombined,
+        bq: bq,
+        earned: bq * pctCombined / 100,
+      };
+    });
+  }
+
+  function aggregateBQWeighted(items, field) {
+    let total = 0, weighted = 0;
+    items.forEach(a => {
+      if (a.bq > 0) {
+        total += a.bq;
+        weighted += a.bq * a[field];
+      }
+    });
+    return total > 0 ? weighted / total : 0;
+  }
+
+  function sumField(items, field) {
+    return items.reduce((s, a) => s + (a[field] || 0), 0);
+  }
+
+  function computeStats(items) {
+    return {
+      pct_proc: aggregateBQWeighted(items, 'pct_proc'),
+      pct_inst: aggregateBQWeighted(items, 'pct_inst'),
+      pct_combined: aggregateBQWeighted(items, 'pct_combined'),
+      earned: sumField(items, 'earned'),
+      bq_total: sumField(items, 'bq'),
+      count: items.length,
+    };
+  }
+
+  function groupBy(items, keyFn) {
+    const out = {};
+    items.forEach(a => {
+      const k = keyFn(a);
+      if (!out[k]) out[k] = [];
+      out[k].push(a);
+    });
+    return out;
+  }
+
+  // ===== Formatting =====
+
+  function formatPct(v, d) {
+    if (d == null) d = 1;
+    return (v || 0).toFixed(d) + '%';
+  }
+
+  function formatRM(v) {
+    v = v || 0;
+    if (v >= 1e6) return 'RM ' + (v / 1e6).toFixed(2) + 'M';
+    if (v >= 1e3) return 'RM ' + (v / 1e3).toFixed(0) + 'K';
+    return 'RM ' + v.toFixed(0);
+  }
+
+  function formatNumber(v) {
+    return (v || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+  }
+
+  function pctClass(v) {
+    v = v || 0;
+    if (v >= 75) return 'pct-high';
+    if (v >= 50) return 'pct-mid';
+    if (v >= 25) return 'pct-mid-low';
+    return 'pct-low';
+  }
+
+  // ===== FFG view rendering =====
+
+  function renderFFG(data) {
+    const items = buildActivityIndex(data, 'FFG');
+    if (items.length === 0) {
+      console.warn('No FFG activities found — view will show empty state.');
+    }
+
+    const stats = computeStats(items);
+
+    // Header pill — activity count
+    setText('ffg-meta-activities', items.length + ' activities');
+
+    // KPIs
+    setText('ffg-kpi-combined', formatPct(stats.pct_combined));
+    setText('ffg-kpi-procurement', formatPct(stats.pct_proc));
+    setText('ffg-kpi-installation', formatPct(stats.pct_inst));
+    setText('ffg-kpi-earned', formatRM(stats.earned));
+
+    // Section table — group by (Stream, Section)
+    const sectionGroups = groupBy(items, a =>
+      (a.activity.Stream || '?') + '|' + (a.activity.Section || '?')
+    );
+    const sectionBody = document.getElementById('ffg-section-table-body');
+    if (sectionBody) {
+      const rows = Object.entries(sectionGroups)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, groupItems]) => {
+          const [stream, section] = key.split('|');
+          const s = computeStats(groupItems);
+          return `<tr>
+            <td><strong>${stream}</strong></td>
+            <td>${section}</td>
+            <td style="text-align:right">${formatNumber(s.bq_total)}</td>
+            <td style="text-align:right">${groupItems.length}</td>
+            <td class="pct-cell ${pctClass(s.pct_proc)}">${formatPct(s.pct_proc)}</td>
+            <td class="pct-cell ${pctClass(s.pct_inst)}">${formatPct(s.pct_inst)}</td>
+            <td class="pct-cell ${pctClass(s.pct_combined)}">${formatPct(s.pct_combined)}</td>
+          </tr>`;
+        }).join('');
+      sectionBody.innerHTML = rows || '<tr><td colspan="7" style="text-align:center; opacity:0.6">No data</td></tr>';
+    }
+
+    // Tank table — group by (Stream, Section, Tank)
+    const tankGroups = groupBy(items, a =>
+      (a.activity.Stream || '?') + '|' + (a.activity.Section || '?') + '|' + (a.activity['Tank Name'] || '?')
+    );
+    const tankBody = document.getElementById('ffg-tank-table-body');
+    if (tankBody) {
+      const rows = Object.entries(tankGroups)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, groupItems]) => {
+          const [stream, section, tank] = key.split('|');
+          const s = computeStats(groupItems);
+          return `<tr>
+            <td>${stream}</td>
+            <td>${section}</td>
+            <td><strong>${tank}</strong></td>
+            <td style="text-align:right">${formatNumber(s.bq_total)}</td>
+            <td style="text-align:right">${groupItems.length}</td>
+            <td class="pct-cell ${pctClass(s.pct_proc)}">${formatPct(s.pct_proc)}</td>
+            <td class="pct-cell ${pctClass(s.pct_inst)}">${formatPct(s.pct_inst)}</td>
+            <td class="pct-cell ${pctClass(s.pct_combined)}">${formatPct(s.pct_combined)}</td>
+          </tr>`;
+        }).join('');
+      tankBody.innerHTML = rows || '<tr><td colspan="8" style="text-align:center; opacity:0.6">No data</td></tr>';
+    }
+
+    // Today's Reports — filter FFG daily reports to today
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const dailyAll = rowsForPlant((data.lists || {})['LCL Daily Report'] || [], 'FFG');
+    const todayReports = dailyAll.filter(r => (r['Submission Date'] || '').slice(0, 10) === todayStr);
+    setText('ffg-reports-today', todayReports.length);
+    const ownM = sumField(todayReports.map(r => ({ v: r['Own Manpower'] || 0 })), 'v');
+    const subM = sumField(todayReports.map(r => ({ v: r['Subcon Manpower'] || 0 })), 'v');
+    setText('ffg-reports-manpower-own', formatNumber(ownM));
+    setText('ffg-reports-manpower-subcon', formatNumber(subM));
+    setText('ffg-reports-manpower-total', formatNumber(ownM + subM));
+    setText('ffg-reports-meta', dailyAll.length + ' total reports submitted to date');
+
+    // Activities — breakdown by status
+    const installed = items.filter(a => a.pct_inst >= 100).length;
+    const inProgress = items.filter(a => a.pct_inst > 0 && a.pct_inst < 100).length;
+    const notStarted = items.filter(a => a.pct_inst === 0).length;
+    setText('ffg-activities-count', items.length);
+    setText('ffg-activities-install-status',
+      installed + ' complete · ' + inProgress + ' in progress · ' + notStarted + ' not started');
+
+    const procStages = groupBy(items, a => {
+      const p = a.pct_proc;
+      if (p === 0) return '0% Not Procured';
+      if (p === 100) return '100% Delivered';
+      return p + '% In progress';
+    });
+    setText('ffg-activities-procurement-status',
+      Object.entries(procStages)
+        .sort()
+        .map(([k, v]) => k + ' (' + v.length + ')')
+        .join(' · ')
+    );
+    setText('ffg-activities-meta', items.length + ' activities · RM ' + (stats.bq_total / 1e6).toFixed(1) + 'M BQ');
+
+    // CIP — basic counts (Phase 3.3 will add the matrix)
+    const cipRows = ((data.lists || {})['CIP Tracking List'] || []).filter(r => getPlant(r) === 'FFG');
+    const cipTanks = new Set(cipRows.map(r => (r.Stream || '') + '-' + (r['Tank Number'] || ''))).size;
+    setText('ffg-cip-count', cipRows.length);
+    setText('ffg-cip-tanks', cipTanks);
+    setText('ffg-cip-meta', cipRows.length + ' entries · ' + cipTanks + ' tanks');
+
+    // Underdrain — basic counts (Phase 3.3 will add the step table)
+    const udRows = ((data.lists || {})['Underdrain Tracking List'] || []).filter(r => getPlant(r) === 'FFG');
+    const udTanks = new Set(udRows.map(r => (r.Stream || '') + '-' + (r['Tank Number'] || ''))).size;
+    setText('ffg-underdrain-count', udRows.length);
+    setText('ffg-underdrain-tanks', udTanks);
+    setText('ffg-underdrain-meta', udRows.length + ' entries · ' + udTanks + ' tanks');
+
+    // Delivery Orders — count FFG-tagged delivery orders
+    const doRows = rowsForPlant((data.lists || {})['LCL Delivery Order'] || [], 'FFG');
+    setText('ffg-deliveries-count', doRows.length);
   }
 
   // ===== Main loader =====
@@ -1285,14 +1642,13 @@
   (async function loadLiveData() {
     const statusEl = document.getElementById('data-status');
     const tsEl = document.getElementById('last-refreshed-text');
-    const ffgSummaryEl = document.getElementById('ffg-record-summary');
 
     try {
       const response = await fetch('./data.json?_t=' + Date.now(), { cache: 'no-store' });
       if (!response.ok) throw new Error('HTTP ' + response.status);
       const data = await response.json();
 
-      // 1. Update "Last refreshed" timestamp
+      // 1. Last refreshed timestamp
       if (tsEl && data.generated_at) {
         const ts = new Date(data.generated_at);
         const formatted = ts.toLocaleString('en-MY', {
@@ -1302,7 +1658,7 @@
         tsEl.textContent = 'Last refreshed: ' + formatted;
       }
 
-      // 2. Update data-status banner with overall record counts
+      // 2. Data-status banner
       if (statusEl) {
         const counts = Object.entries(data.lists)
           .map(([name, items]) => name.replace('LCL ', '') + ': ' + items.length)
@@ -1311,24 +1667,10 @@
         statusEl.style.color = '#14532d';
       }
 
-      // 3. Update FFG-specific record summary
-      if (ffgSummaryEl) {
-        const lists = data.lists || {};
-        const ffgActivities = deduplicateByCode(rowsForPlant(lists['LCL Activity Master'], 'FFG'));
-        const ffgDaily = rowsForPlant(lists['LCL Daily Report'], 'FFG');
-        const ffgProcurement = rowsForPlant(lists['LCL Procurement Update'], 'FFG');
-        const cipCount = (lists['CIP Tracking List'] || []).length;
-        const underdrainCount = (lists['Underdrain Tracking List'] || []).length;
+      // 3. Render FFG view with live data
+      renderFFG(data);
 
-        ffgSummaryEl.innerHTML =
-          ffgActivities.length + ' activities · ' +
-          ffgDaily.length + ' daily reports · ' +
-          ffgProcurement.length + ' procurement updates · ' +
-          cipCount + ' CIP rows · ' +
-          underdrainCount + ' underdrain rows';
-      }
-
-      // 4. Stash data globally for future Phase 3.2 calculations
+      // 4. Stash data globally for debugging
       window.__dashboardData = data;
       console.log('Live data loaded:', data);
 
@@ -1337,9 +1679,6 @@
       if (statusEl) {
         statusEl.innerHTML = '<strong>⚠ Live data not connected</strong> — showing baseline only';
         statusEl.style.color = '#9a3412';
-      }
-      if (ffgSummaryEl) {
-        ffgSummaryEl.textContent = '(could not load)';
       }
     }
   })();
