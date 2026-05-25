@@ -919,21 +919,21 @@
           </div>
         </section>
 
-        <!-- === CIP TRACKING (Phase 3.3 fills this in) === -->
+        <!-- === CIP TRACKING === -->
         <section class="content-section" id="ffg-cip">
           <h2 class="section-h2">CIP Tracking <span class="h2-meta" id="ffg-cip-meta">--</span></h2>
-          <div class="card" style="padding: 20px;">
-            <p style="margin-top: 0; margin-bottom: 0;">Cast-In-Pipe installation matrix (tanks × CIP items, fractional progress 0-1) — coming in Phase 3.3.</p>
-            <p style="margin-bottom: 0;">Current data: <strong id="ffg-cip-count">--</strong> tracking entries across <strong id="ffg-cip-tanks">--</strong> tanks.</p>
+          <div class="card" style="padding: 16px;">
+            <p style="margin-top: 0; opacity: 0.75; font-size: 0.88em;">Cast-In-Pipe installation matrix per tank. Each cell = fractional progress (0 = not installed, 1 = fully installed). Empty cells = no data for that combination.</p>
+            <div id="ffg-cip-matrix" style="overflow-x: auto;"></div>
           </div>
         </section>
 
-        <!-- === UNDERDRAIN STEPS (Phase 3.3 fills this in) === -->
+        <!-- === UNDERDRAIN STEPS === -->
         <section class="content-section" id="ffg-underdrain">
           <h2 class="section-h2">Underdrain Steps <span class="h2-meta" id="ffg-underdrain-meta">--</span></h2>
-          <div class="card" style="padding: 20px;">
-            <p style="margin-top: 0; margin-bottom: 0;">9-step underdrain installation tracker per tank (Setting Out → Chemical Bolts → Levelling Angles → Unistruts → Assembly → Installation → Monopour → WTT → Handover) — coming in Phase 3.3.</p>
-            <p style="margin-bottom: 0;">Current data: <strong id="ffg-underdrain-count">--</strong> entries across <strong id="ffg-underdrain-tanks">--</strong> tanks.</p>
+          <div class="card" style="padding: 16px;">
+            <p style="margin-top: 0; opacity: 0.75; font-size: 0.88em;">9-step underdrain installation tracker per tank. Each cell = step progress (0 = not started, 1 = complete). Empty = no record.</p>
+            <div id="ffg-underdrain-matrix" style="overflow-x: auto;"></div>
           </div>
         </section>
 
@@ -1618,23 +1618,119 @@
     );
     setText('ffg-activities-meta', items.length + ' activities · RM ' + (stats.bq_total / 1e6).toFixed(1) + 'M BQ');
 
-    // CIP — basic counts (Phase 3.3 will add the matrix)
+    // CIP Matrix
     const cipRows = ((data.lists || {})['CIP Tracking List'] || []).filter(r => getPlant(r) === 'FFG');
     const cipTanks = new Set(cipRows.map(r => (r.Stream || '') + '-' + (r['Tank Number'] || ''))).size;
-    setText('ffg-cip-count', cipRows.length);
-    setText('ffg-cip-tanks', cipTanks);
-    setText('ffg-cip-meta', cipRows.length + ' entries · ' + cipTanks + ' tanks');
+    setText('ffg-cip-meta', cipRows.length + ' entries · ' + cipTanks + ' tanks tracked');
+    renderMatrix({
+      containerId: 'ffg-cip-matrix',
+      rows: cipRows,
+      itemField: 'CIP Item',
+      progressField: 'Progress',
+      items: [
+        'Filter Outlet (DN600)',
+        'Filter Manhole (DN800)',
+        'Filter Washwater',
+        'Filter Air Scour (DN300)',
+        'Flume Scour CIP (DN150)',
+        'Filter Air Release (DN50)',
+        'Filter Media Loss of Head HP',
+        'Filter Media Loss of Head LP',
+      ],
+      itemColLabel: 'CIP Item',
+    });
 
-    // Underdrain — basic counts (Phase 3.3 will add the step table)
+    // Underdrain Step Matrix
     const udRows = ((data.lists || {})['Underdrain Tracking List'] || []).filter(r => getPlant(r) === 'FFG');
     const udTanks = new Set(udRows.map(r => (r.Stream || '') + '-' + (r['Tank Number'] || ''))).size;
-    setText('ffg-underdrain-count', udRows.length);
-    setText('ffg-underdrain-tanks', udTanks);
-    setText('ffg-underdrain-meta', udRows.length + ' entries · ' + udTanks + ' tanks');
+    setText('ffg-underdrain-meta', udRows.length + ' entries · ' + udTanks + ' tanks tracked');
+    renderMatrix({
+      containerId: 'ffg-underdrain-matrix',
+      rows: udRows,
+      itemField: 'Activity',
+      progressField: 'Progress',
+      items: [
+        'WTT and Handover',
+        'Setting Out',
+        'Drilling Chemical Bolts',
+        'Levelling Angles',
+        'Unistruts',
+        'Assembly',
+        'Installation',
+        'Monopour',
+      ],
+      itemColLabel: 'Step',
+    });
 
     // Delivery Orders — count FFG-tagged delivery orders
     const doRows = rowsForPlant((data.lists || {})['LCL Delivery Order'] || [], 'FFG');
     setText('ffg-deliveries-count', doRows.length);
+  }
+
+  // ===== Matrix renderer (shared by CIP and Underdrain) =====
+
+  function renderMatrix(opts) {
+    const container = document.getElementById(opts.containerId);
+    if (!container) return;
+
+    // Index rows by (stream, tank, item) → progress
+    const index = {};
+    opts.rows.forEach(r => {
+      const key = (r.Stream || '') + '|' + (r['Tank Number'] || '') + '|' + (r[opts.itemField] || '');
+      const v = r[opts.progressField];
+      index[key] = (v == null || v === '') ? null : Number(v);
+    });
+
+    const tanks = Array.from({ length: 20 }, (_, i) => i + 1);
+    const streams = ['Stream A', 'Stream B'];
+
+    let html = '';
+    streams.forEach(stream => {
+      html += '<div style="margin-bottom: 24px;">';
+      html += '<div style="font-weight: 600; padding: 8px 0; color: var(--navy);">' + stream + '</div>';
+      html += '<table style="border-collapse: collapse; font-size: 0.85em; min-width: 100%;">';
+
+      // Header
+      html += '<thead><tr>';
+      html += '<th style="text-align: left; padding: 6px 10px; border-bottom: 1px solid #ccc; background: #f5f5f5; font-weight: 600; white-space: nowrap;">' + opts.itemColLabel + '</th>';
+      tanks.forEach(t => {
+        html += '<th style="padding: 6px 4px; border-bottom: 1px solid #ccc; background: #f5f5f5; font-weight: 500; min-width: 32px; text-align: center;">T' + t + '</th>';
+      });
+      html += '</tr></thead>';
+
+      // Body
+      html += '<tbody>';
+      opts.items.forEach(item => {
+        html += '<tr>';
+        html += '<td style="text-align: left; padding: 6px 10px; border-bottom: 1px solid #eee; white-space: nowrap;">' + item + '</td>';
+        tanks.forEach(t => {
+          const key = stream + '|' + t + '|' + item;
+          const val = (key in index) ? index[key] : null;
+          html += '<td style="text-align: center; padding: 6px 4px; border-bottom: 1px solid #eee; ' + cellStyle(val) + '">' + cellLabel(val) + '</td>';
+        });
+        html += '</tr>';
+      });
+      html += '</tbody></table></div>';
+    });
+
+    container.innerHTML = html;
+  }
+
+  function cellStyle(val) {
+    if (val == null) return 'background: #f9f9f9; color: #bbb;';
+    if (val >= 1) return 'background: #d1fae5; color: #065f46; font-weight: 600;';
+    if (val >= 0.75) return 'background: #ecfccb; color: #3f6212;';
+    if (val >= 0.5) return 'background: #fef9c3; color: #854d0e;';
+    if (val >= 0.25) return 'background: #fed7aa; color: #9a3412;';
+    if (val > 0) return 'background: #fecaca; color: #991b1b;';
+    return 'background: #fee2e2; color: #b91c1c;';  // val === 0
+  }
+
+  function cellLabel(val) {
+    if (val == null) return '–';
+    if (val === 1) return '✓';
+    if (val === 0) return '·';
+    return String(val);
   }
 
   // ===== Main loader =====
